@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Sparkles,
   Mic, 
@@ -83,70 +84,112 @@ export default function MainStylesView({
   return (
     <div className="flex-1 flex flex-col gap-8 overflow-y-auto pr-1 select-none">
       
-      {/* 0. ADAPTIVE MODE TOP HERO SECTION */}
-      <div className="bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-[#0e0e0e] border border-orange-500/30 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-          <div className="flex flex-col gap-2.5">
-            {/* The Button called Adaptive Mode */}
-            <button
-              onClick={onToggleAdaptive}
-              className={`w-fit px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all shadow-xl cursor-pointer ${
-                isAdaptiveMode
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-[0_0_24px_rgba(249,115,22,0.45)] scale-[1.02]'
-                  : 'bg-white/10 hover:bg-white/15 text-white/80 border border-white/15'
-              }`}
-            >
-              <Sparkles className={`w-4 h-4 ${isAdaptiveMode ? 'text-black' : 'text-orange-400'}`} />
-              <span className="text-base tracking-tight">Adaptive Mode</span>
-              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
-                isAdaptiveMode ? 'bg-black/20 text-black' : 'bg-white/10 text-white/60'
-              }`}>
-                {isAdaptiveMode ? 'ON' : 'OFF'}
-              </span>
-            </button>
+      {/* 0. ADAPTIVE MODE TOP HERO SECTION (BEIGE & COFFEE BROWN THEME) */}
+      <div className="bg-gradient-to-br from-[#2c1e18]/95 via-[#221612]/95 to-[#170e0a]/95 border border-[#8d6e63]/40 rounded-3xl p-8 sm:p-10 flex flex-col gap-6 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+        {/* Soft warm coffee ambient glow */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#8d6e63]/10 rounded-full blur-3xl pointer-events-none" />
 
-            {/* Below the button: exact description */}
-            <p className="text-white/80 text-sm font-medium leading-relaxed max-w-xl">
-              WhisPURR automatically changes your style based on the app you are working on
-            </p>
+        {/* Top Row: Title + Sliding Toggle Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#4e342e]/70 border border-[#8d6e63]/50 flex items-center justify-center text-[#f4ece1] shadow-inner">
+              <Sparkles className="w-6 h-6 text-[#d7ccc8]" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#f4ece1] tracking-tight">
+                Adaptive Mode
+              </h2>
+              <span className="text-xs text-[#a1887f] font-medium">Automatic Context Switching</span>
+            </div>
           </div>
 
+          {/* Controls: Meet Styles link + Real Toggle Switch Control */}
           <div className="flex items-center gap-3 self-start sm:self-auto">
-            {/* Meet Styles Replay Link */}
-            <button
-              onClick={onRevisitIntro}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs border border-white/10 transition-colors cursor-pointer"
-              title="Revisit the onboarding intro"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-orange-400" />
-              <span>Meet Styles Intro</span>
-            </button>
+            {onRevisitIntro && (
+              <button
+                onClick={onRevisitIntro}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-[#3e2723]/50 hover:bg-[#4e342e]/70 text-[#d7ccc8] hover:text-[#f4ece1] text-xs border border-[#8d6e63]/30 transition-colors cursor-pointer"
+                title="Revisit the introductory walkthrough"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-[#a1887f]" />
+                <span>Meet Styles</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-4 bg-[#190f0b]/90 border border-[#5d4037]/60 p-2 px-3.5 rounded-2xl shadow-inner">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#d7ccc8]">
+                {isAdaptiveMode ? 'ON' : 'OFF'}
+              </span>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAdaptiveMode}
+                onClick={onToggleAdaptive}
+                className={`relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 transition-all duration-300 ease-in-out p-0.5 items-center focus:outline-none ${
+                  isAdaptiveMode
+                    ? 'bg-gradient-to-r from-[#8d6e63] to-[#6d4c41] border-[#a1887f] shadow-[0_0_18px_rgba(141,110,99,0.5)]'
+                    : 'bg-[#2b1f1a] border-[#5d4037]/60'
+                }`}
+                title={isAdaptiveMode ? "Disable Adaptive Mode" : "Enable Adaptive Mode"}
+              >
+                <span className="sr-only">Toggle Adaptive Mode</span>
+                <motion.span
+                  layout
+                  transition={{ type: "spring", stiffness: 600, damping: 35 }}
+                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-[#f4ece1] shadow-md flex items-center justify-center ${
+                    isAdaptiveMode ? 'ml-auto text-[#3e2723]' : 'mr-auto text-[#8d6e63]'
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full ${isAdaptiveMode ? 'bg-[#5d4037]' : 'bg-[#8d6e63]/60'}`} />
+                </motion.span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Live App Mapping / Context feedback */}
-        <div className="pt-3 border-t border-white/5 flex flex-wrap items-center gap-2.5 text-xs">
-          <span className="text-white/40 text-[11px] uppercase tracking-wider font-bold">
-            {isAdaptiveMode ? 'Auto-detected contexts:' : 'Manual mode:'}
+        {/* Description directly below the toggle */}
+        <div className="relative z-10 pt-1">
+          <p className="text-[#eaddd0] text-base sm:text-lg font-medium leading-relaxed max-w-2xl">
+            WhisPURR automatically changes your style based on the app you are working on
+          </p>
+        </div>
+
+        {/* Live App Context Rules in Coffee Brown and Cream Palette */}
+        <div className="pt-6 border-t border-[#8d6e63]/25 flex flex-wrap items-center gap-3 text-xs relative z-10">
+          <span className="text-[#a1887f] text-[11px] uppercase tracking-wider font-bold">
+            {isAdaptiveMode ? 'Active App Mappings:' : 'Manual Mode:'}
           </span>
           {isAdaptiveMode ? (
             <>
-              <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-1.5 text-emerald-300 font-medium">
-                <span>WhatsApp</span> → <span className="font-bold text-white">Casual</span>
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#3e2723]/50 border border-[#8d6e63]/40 flex items-center gap-2 text-[#f4ece1] shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#a1887f]" />
+                <span className="text-[#d7ccc8] font-medium">WhatsApp</span>
+                <span className="text-[#8d6e63]">→</span>
+                <span className="font-bold text-[#f4ece1]">Casual</span>
               </div>
-              <div className="px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center gap-1.5 text-blue-300 font-medium">
-                <span>Outlook / Email</span> → <span className="font-bold text-white">Professional</span>
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#3e2723]/50 border border-[#8d6e63]/40 flex items-center gap-2 text-[#f4ece1] shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#a1887f]" />
+                <span className="text-[#d7ccc8] font-medium">Outlook / Email</span>
+                <span className="text-[#8d6e63]">→</span>
+                <span className="font-bold text-[#f4ece1]">Professional</span>
               </div>
-              <div className="px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center gap-1.5 text-purple-300 font-medium">
-                <span>VS Code</span> → <span className="font-bold text-white">Technical</span>
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#3e2723]/50 border border-[#8d6e63]/40 flex items-center gap-2 text-[#f4ece1] shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#a1887f]" />
+                <span className="text-[#d7ccc8] font-medium">VS Code</span>
+                <span className="text-[#8d6e63]">→</span>
+                <span className="font-bold text-[#f4ece1]">Technical</span>
               </div>
-              <div className="px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-1.5 text-amber-300 font-medium">
-                <span>Slack</span> → <span className="font-bold text-white">Concise</span>
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#3e2723]/50 border border-[#8d6e63]/40 flex items-center gap-2 text-[#f4ece1] shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-[#a1887f]" />
+                <span className="text-[#d7ccc8] font-medium">Slack</span>
+                <span className="text-[#8d6e63]">→</span>
+                <span className="font-bold text-[#f4ece1]">Concise</span>
               </div>
             </>
           ) : (
-            <span className="text-white/50 text-xs italic">
-              Locked to {activeStyleName} across all apps. Click "Adaptive Mode" to enable automatic switching.
+            <span className="text-[#a1887f] text-xs italic">
+              Currently fixed to <strong className="text-[#f4ece1]">{activeStyleName}</strong> across all apps. Flip the toggle above to enable automatic detection.
             </span>
           )}
         </div>
