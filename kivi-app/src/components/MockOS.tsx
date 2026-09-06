@@ -1,7 +1,8 @@
 import { useState, useEffect, memo } from 'react';
-import { Mail, Terminal, Sparkles, X, Minus, Wifi, Cat, Type, FileText } from 'lucide-react';
+import { Mail, Terminal, Sparkles, X, Minus, Wifi, Type, FileText, Check, MessageCircle, Briefcase, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import WhispurrApp from './WhispurrApp';
+import KiviCatIcon from './KiviCatIcon';
 
 type AppType = 'email' | 'vscode' | 'ai' | 'whispurr' | null;
 
@@ -17,6 +18,22 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
   const [emailText, setEmailText] = useState('');
   const [vscodeText, setVscodeText] = useState('');
   const [aiText, setAiText] = useState('');
+
+  // Persisted Theme State
+  const [theme, setThemeState] = useState<string>(() => {
+    try {
+      return localStorage.getItem('whispurr_theme') || 'midnight';
+    } catch (e) {
+      return 'midnight';
+    }
+  });
+
+  const setTheme = (newTheme: string) => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem('whispurr_theme', newTheme);
+    } catch (e) {}
+  };
 
   // Auto open Notes (from the Alt+Scroll workflow)
   useEffect(() => {
@@ -38,7 +55,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
     if (openApp === 'email') return <Mail className="w-4 h-4 text-blue-300" />;
     if (openApp === 'vscode') return <Terminal className="w-4 h-4 text-blue-500" />;
     if (openApp === 'ai') return <Sparkles className="w-4 h-4 text-purple-300" />;
-    if (openApp === 'whispurr') return <Cat className="w-4 h-4 text-orange-400" />;
+    if (openApp === 'whispurr') return <KiviCatIcon size={16} className="text-orange-400" />;
     return <div className="w-4 h-4 border border-white/20 rounded-sm border-dashed" />;
   };
 
@@ -71,7 +88,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                   >
                      <div className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Pinned Apps</div>
                      <div className="flex items-center gap-3 text-white hover:bg-white/10 p-2 rounded cursor-pointer" onClick={() => {setOpenApp('whispurr'); setIsStartMenuOpen(false);}}>
-                        <Cat className="w-5 h-5 text-orange-400" />
+                        <KiviCatIcon size={20} className="text-orange-400" />
                         <span className="font-medium text-sm">WhisPURR Settings</span>
                      </div>
                      <div className="flex items-center gap-3 text-white hover:bg-white/10 p-2 rounded cursor-pointer" onClick={() => {setOpenApp('ai'); setIsStartMenuOpen(false);}}>
@@ -106,7 +123,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                onClick={() => openApp !== 'whispurr' && setOpenApp('whispurr')}
                className={`w-8 h-8 rounded flex items-center justify-center cursor-pointer transition-colors ${openApp === 'whispurr' ? 'bg-white/10 border-b-2 border-orange-400' : 'hover:bg-white/10'}`}
             >
-               <Cat className="w-5 h-5 text-orange-400" />
+               <KiviCatIcon size={20} className="text-orange-400" />
             </div>
          </div>
 
@@ -148,12 +165,12 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
             }}
             className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all duration-500 shadow-2xl relative z-10 ${
               isAltPressed || isLoading 
-                ? 'bg-black/90 border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.15)] scale-110'
+                ? 'bg-black/90 border border-orange-400/40 shadow-[0_0_20px_rgba(249,115,22,0.35)] scale-110'
                 : 'bg-gradient-to-br from-[#2a2a2a] to-[#111] hover:from-[#333] hover:to-[#1a1a1a] border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]'
             }`}
           >
-            <Cat className={`text-gray-300 transition-all duration-500 ${
-              isLoading ? 'w-4 h-4 animate-pulse text-white' : (isAltPressed ? 'w-4 h-4 text-white' : 'w-4 h-4 opacity-80')
+            <KiviCatIcon glowingEyes={isLoading || isAltPressed} size={18} className={`text-orange-300 transition-all duration-500 ${
+              isLoading ? 'animate-pulse text-white' : (isAltPressed ? 'text-white' : 'opacity-90')
             }`} />
           </div>
 
@@ -178,9 +195,12 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                   exit={{ opacity: 0, x: 0, y: 0, scale: 0.5 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.05 }}
                   onClick={() => setActivePopup(activePopup === 'styles' ? null : 'styles')}
-                  className={`absolute w-9 h-9 rounded-full border shadow-xl flex items-center justify-center cursor-pointer transition-colors z-20 ${
-                    activePopup === 'styles' ? 'bg-white/20 border-white/30 text-white' : 'bg-[#1e1e1e] border-white/10 text-white/60 hover:bg-white/15 hover:text-white'
+                  className={`absolute w-9 h-9 rounded-full border shadow-xl flex items-center justify-center cursor-pointer transition-all z-20 ${
+                    activePopup === 'styles'
+                      ? 'bg-orange-500/25 border-orange-400/70 text-orange-300 shadow-[0_0_16px_rgba(249,115,22,0.5)]'
+                      : 'bg-[#1e1e1e] border-white/10 text-white/60 hover:bg-orange-500/15 hover:border-orange-400/40 hover:text-orange-300'
                   }`}
+                  title="Styles & Scripting"
                 >
                   <Type className="w-4 h-4" />
                   
@@ -190,20 +210,78 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                         initial={{ opacity: 0, scale: 0.9, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                        className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-[#1A1A1A]/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-2 w-40 shadow-2xl flex flex-col gap-1 z-30"
+                        className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-[#0d0d0d]/95 backdrop-blur-2xl border border-orange-500/30 rounded-2xl p-3 w-56 shadow-[0_16px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(249,115,22,0.2)] flex flex-col gap-2 z-30"
                       >
-                        {(['Casual', 'Professional', 'Concise'] as const).map(s => (
-                          <div 
-                            key={s}
-                            onClick={(e) => { e.stopPropagation(); if(setMode) setMode(s as any); setActivePopup(null); }}
-                            className={`px-3 py-2 text-sm rounded-xl cursor-pointer flex items-center gap-2 transition-colors ${mode === s ? 'bg-white/10 text-white font-medium' : 'text-white/50 hover:bg-white/5 hover:text-white'}`}
-                          >
-                            {s}
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-2 pb-1.5 border-b border-white/5">
+                          <span className="text-[10px] font-bold tracking-widest text-orange-400/90 uppercase flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-orange-400" />
+                            Style Mode
+                          </span>
+                          <span className="text-[10px] text-white/40 font-medium">WhisPURR</span>
+                        </div>
+
+                        {/* Styles List */}
+                        <div className="flex flex-col gap-1">
+                          {[
+                            { name: 'Casual', desc: 'Friendly & relaxed', icon: MessageCircle },
+                            { name: 'Professional', desc: 'Polished & formal', icon: Briefcase },
+                            { name: 'Concise', desc: 'Brief & direct', icon: Zap },
+                          ].map(s => {
+                            const isSelected = mode === s.name;
+                            const Icon = s.icon;
+                            return (
+                              <div 
+                                key={s.name}
+                                onClick={(e) => { e.stopPropagation(); if(setMode) setMode(s.name as any); setActivePopup(null); }}
+                                className={`px-3 py-2 rounded-xl cursor-pointer flex items-center justify-between transition-all border ${
+                                  isSelected 
+                                    ? 'bg-gradient-to-r from-orange-500/25 to-amber-500/10 text-orange-200 border-orange-500/40 shadow-[0_0_12px_rgba(249,115,22,0.25)] font-semibold' 
+                                    : 'text-white/60 hover:text-white hover:bg-white/5 border-transparent'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-orange-400' : 'text-white/40'}`} />
+                                  <div className="flex flex-col text-left">
+                                    <span className="text-xs leading-tight">{s.name}</span>
+                                    <span className="text-[10px] text-white/30 font-normal leading-tight">{s.desc}</span>
+                                  </div>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-orange-400 shrink-0" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Script Output Section */}
+                        <div className="pt-1.5 border-t border-white/5">
+                          <div className="flex items-center justify-between px-2 pb-1.5 text-[10px] font-bold tracking-widest text-orange-400/90 uppercase">
+                            <span>Script Output</span>
+                            <span className="text-[9px] text-white/40 font-normal normal-case">{degree === 1 ? 'A-Z Roman' : 'Native'}</span>
                           </div>
-                        ))}
-                        <div className="flex bg-white/5 p-1 rounded-lg mt-1 border border-white/5">
-                          <div onClick={(e) => { e.stopPropagation(); if(setDegree) setDegree(1); setActivePopup(null); }} className={`flex-1 text-center text-xs py-1.5 rounded-md cursor-pointer transition-colors ${degree === 1 ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white/70'}`}>Roman</div>
-                          <div onClick={(e) => { e.stopPropagation(); if(setDegree) setDegree(2); setActivePopup(null); }} className={`flex-1 text-center text-xs py-1.5 rounded-md cursor-pointer transition-colors ${degree === 2 ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white/70'}`}>Native</div>
+                          
+                          <div className="flex bg-black/70 p-1 rounded-xl border border-orange-500/25 shadow-inner gap-1">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); if(setDegree) setDegree(1); setActivePopup(null); }} 
+                              className={`flex-1 text-center text-xs py-1.5 rounded-lg font-semibold cursor-pointer transition-all ${
+                                degree === 1 
+                                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-[0_0_12px_rgba(249,115,22,0.4)]' 
+                                  : 'text-white/50 hover:text-white hover:bg-white/5'
+                              }`}
+                            >
+                              Roman (A-Z)
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); if(setDegree) setDegree(2); setActivePopup(null); }} 
+                              className={`flex-1 text-center text-xs py-1.5 rounded-lg font-semibold cursor-pointer transition-all ${
+                                degree === 2 
+                                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-[0_0_12px_rgba(249,115,22,0.4)]' 
+                                  : 'text-white/50 hover:text-white hover:bg-white/5'
+                              }`}
+                            >
+                              Native
+                            </button>
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -244,7 +322,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                 {openApp === 'email' && <><Mail className="w-4 h-4"/> Outlook</>}
                 {openApp === 'vscode' && <><Terminal className="w-4 h-4"/> VS Code</>}
                 {openApp === 'ai' && <><Sparkles className="w-4 h-4"/> Antigravity Canvas</>}
-                {openApp === 'whispurr' && <><Cat className="w-4 h-4 text-orange-400"/> Kivi Dashboard</>}
+                {openApp === 'whispurr' && <><KiviCatIcon size={16} className="text-orange-400"/> Kivi Dashboard</>}
               </div>
               <div className="flex items-center gap-4 text-white/50">
                 <Minus 
@@ -341,7 +419,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                 </div>
               )}
 
-              {openApp === 'whispurr' && <WhispurrApp mode={mode} />}
+              {openApp === 'whispurr' && <WhispurrApp mode={mode} theme={theme} setTheme={setTheme} />}
             </div>
           </motion.div>
         )}

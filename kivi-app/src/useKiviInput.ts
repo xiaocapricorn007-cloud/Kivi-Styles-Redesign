@@ -6,16 +6,47 @@ export const MODES: Mode[] = ['Work Messaging', 'Personal Messaging', 'Email', '
 
 export function useKiviInput() {
   const [isAltPressed, setIsAltPressed] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const [hudPos, setHudPos] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-  const [mode, setMode] = useState<Mode>('Personal Messaging');
-  const [degree, setDegree] = useState(2);
+  const [mode, setModeState] = useState<Mode>(() => {
+    try {
+      return (localStorage.getItem('whispurr_mode') as Mode) || 'Personal Messaging';
+    } catch (e) {
+      return 'Personal Messaging';
+    }
+  });
+  const [degree, setDegreeState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('whispurr_degree');
+      return saved ? Number(saved) : 2;
+    } catch (e) {
+      return 2;
+    }
+  });
+
+  const setMode = (newMode: Mode | ((prev: Mode) => Mode)) => {
+    setModeState(prev => {
+      const next = typeof newMode === 'function' ? newMode(prev) : newMode;
+      try {
+        localStorage.setItem('whispurr_mode', next);
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const setDegree = (newDegree: number | ((prev: number) => number)) => {
+    setDegreeState(prev => {
+      const next = typeof newDegree === 'function' ? newDegree(prev) : newDegree;
+      try {
+        localStorage.setItem('whispurr_degree', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
   const [transcript, setTranscript] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
   
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -57,85 +88,29 @@ export function useKiviInput() {
           }
         }
       }
-      if (isAltPressed) {
-        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-          // Keep the HUD awake while adjusting
-          setIsScrolling(true);
-          if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-          scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 1500);
-
-          if (e.key === 'ArrowLeft') {
-            setDegree(prev => Math.max(1, prev - 1));
-          } else if (e.key === 'ArrowRight') {
-            setDegree(prev => Math.min(3, prev + 1));
-          } else if (e.key === 'ArrowDown') {
-            setMode(prev => {
-              const idx = MODES.indexOf(prev);
-              return MODES[(idx + 1) % MODES.length];
-            });
-          } else if (e.key === 'ArrowUp') {
-            setMode(prev => {
-              const idx = MODES.indexOf(prev);
-              return MODES[(idx - 1 + MODES.length) % MODES.length];
-            });
-          }
-        }
-      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Alt') {
         setIsAltPressed(false);
-        setIsScrolling(false);
-        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-        
         try {
           recognitionRef.current?.stop();
         } catch (err) {}
       }
     };
 
-    const handleWheel = (e: WheelEvent) => {
-      if (isAltPressed) {
-        e.preventDefault();
-        
-        if (!isScrolling) {
-          setHudPos({ x: e.clientX, y: e.clientY });
-          setIsScrolling(true);
-          
-          if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-          scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 1500);
-          
-          return;
-        }
-        
-        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 1500);
-
-        const currentIndex = MODES.indexOf(mode);
-        if (e.deltaY > 0) {
-          setMode(MODES[(currentIndex + 1) % MODES.length]);
-        } else {
-          setMode(MODES[(currentIndex - 1 + MODES.length) % MODES.length]);
-        }
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('wheel', handleWheel);
     };
-  }, [isAltPressed, isScrolling, mode]);
+  }, [isAltPressed]);
 
   const toggleListening = () => {
     if (isAltPressed) {
       setIsAltPressed(false);
-      setIsScrolling(false);
       try { recognitionRef.current?.stop(); } catch (err) {}
     } else {
       setIsAltPressed(true);
@@ -167,5 +142,5 @@ export function useKiviInput() {
     };
   }, [transcript, mode, degree]);
 
-  return { isAltPressed, isScrolling, isLoading, hudPos, mode, setMode, degree, setDegree, transcript, translatedText, toggleListening };
+  return { isAltPressed, isLoading, mode, setMode, degree, setDegree, transcript, translatedText, toggleListening };
 }

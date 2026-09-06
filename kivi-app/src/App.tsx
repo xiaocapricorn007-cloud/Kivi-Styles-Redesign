@@ -1,11 +1,10 @@
 import { useEffect } from 'react';
 import { useKiviInput } from './useKiviInput';
-import KiviHUD from './components/KiviHUD';
 import MockOS from './components/MockOS';
-import { AnimatePresence } from 'framer-motion';
+import FootprintManager from './components/FootprintManager';
 
 export default function App() {
-  const { isAltPressed, isScrolling, isLoading, hudPos, mode, setMode, degree, setDegree, translatedText, toggleListening } = useKiviInput();
+  const { isAltPressed, isLoading, mode, setMode, degree, setDegree, translatedText, toggleListening } = useKiviInput();
 
   // Enter full screen on first user interaction to sell the OS feel
   useEffect(() => {
@@ -33,11 +32,8 @@ export default function App() {
         toggleListening={toggleListening}
       />
       
-      <AnimatePresence>
-        {isAltPressed && isScrolling && (
-          <KiviHUD mode={mode} position={hudPos} degree={degree} />
-        )}
-      </AnimatePresence>
+      {/* Hidden interactive cat footprint animation layer */}
+      <FootprintManager />
     </div>
   );
 }
