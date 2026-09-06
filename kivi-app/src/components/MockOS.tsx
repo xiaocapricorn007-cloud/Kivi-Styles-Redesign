@@ -48,6 +48,38 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
   const [vscodeText, setVscodeText] = useState('');
   const [aiText, setAiText] = useState('');
 
+  // Adaptive Mode Global State
+  const [isAdaptiveMode, setIsAdaptiveMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('whispurr_adaptive_mode');
+      return saved !== null ? saved === 'true' : true;
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const toggleAdaptive = () => {
+    setIsAdaptiveMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('whispurr_adaptive_mode', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  // Automatically adapt style based on open app when Adaptive Mode is active
+  useEffect(() => {
+    if (!openApp || !isAdaptiveMode) return;
+    if (openApp === 'whatsapp') {
+      if (setMode) setMode('Casual');
+    } else if (openApp === 'email') {
+      if (setMode) setMode('Professional');
+    } else if (openApp === 'vscode') {
+      if (setMode) setMode('Technical');
+    }
+  }, [openApp, isAdaptiveMode]);
+
   // Screen 7: Real Scenario Demo (WhatsApp) State
   const [whatsappMessages, setWhatsappMessages] = useState<Array<{ sender: string; text: string; time: string }>>([
     { sender: 'alex', text: 'Hey! Any update on the quarterly report? Client meeting is soon.', time: '10:38 AM' }
@@ -725,6 +757,8 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                   setMode={setMode} 
                   theme={theme} 
                   setTheme={setTheme} 
+                  isAdaptiveMode={isAdaptiveMode}
+                  onToggleAdaptive={toggleAdaptive}
                 />
               )}
             </div>

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { 
+  Sparkles,
   Mic, 
   Square, 
   Check, 
@@ -19,6 +20,8 @@ interface MainStylesViewProps {
   onOpenCreateModal: () => void;
   onRevisitIntro: () => void;
   weeklyStats: WeeklyStats;
+  isAdaptiveMode?: boolean;
+  onToggleAdaptive?: () => void;
 }
 
 export default function MainStylesView({
@@ -29,6 +32,8 @@ export default function MainStylesView({
   onOpenCreateModal,
   onRevisitIntro,
   weeklyStats,
+  isAdaptiveMode = true,
+  onToggleAdaptive,
 }: MainStylesViewProps) {
   // Playground state for "Try a Style"
   const defaultPhrase = "hey can you check this when you get time and tell me if everything looks okay";
@@ -78,32 +83,77 @@ export default function MainStylesView({
   return (
     <div className="flex-1 flex flex-col gap-8 overflow-y-auto pr-1 select-none">
       
-      {/* 0. HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              How should Kivi say it?
-            </h1>
+      {/* 0. ADAPTIVE MODE TOP HERO SECTION */}
+      <div className="bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-[#0e0e0e] border border-orange-500/30 rounded-3xl p-6 sm:p-7 flex flex-col gap-4 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex flex-col gap-2.5">
+            {/* The Button called Adaptive Mode */}
+            <button
+              onClick={onToggleAdaptive}
+              className={`w-fit px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all shadow-xl cursor-pointer ${
+                isAdaptiveMode
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-[0_0_24px_rgba(249,115,22,0.45)] scale-[1.02]'
+                  : 'bg-white/10 hover:bg-white/15 text-white/80 border border-white/15'
+              }`}
+            >
+              <Sparkles className={`w-4 h-4 ${isAdaptiveMode ? 'text-black' : 'text-orange-400'}`} />
+              <span className="text-base tracking-tight">Adaptive Mode</span>
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                isAdaptiveMode ? 'bg-black/20 text-black' : 'bg-white/10 text-white/60'
+              }`}>
+                {isAdaptiveMode ? 'ON' : 'OFF'}
+              </span>
+            </button>
+
+            {/* Below the button: exact description */}
+            <p className="text-white/80 text-sm font-medium leading-relaxed max-w-xl">
+              WhisPURR automatically changes your style based on the app you are working on
+            </p>
           </div>
-          <p className="text-white/50 text-sm italic">
-            Speak naturally. Kivi handles how it comes across.
-          </p>
+
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            {/* Meet Styles Replay Link */}
+            <button
+              onClick={onRevisitIntro}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs border border-white/10 transition-colors cursor-pointer"
+              title="Revisit the onboarding intro"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-orange-400" />
+              <span>Meet Styles Intro</span>
+            </button>
+          </div>
         </div>
 
-        {/* Meet Styles Replay Link */}
-        <button
-          onClick={onRevisitIntro}
-          className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs border border-white/10 transition-colors cursor-pointer"
-          title="Revisit the onboarding intro"
-        >
-          <HelpCircle className="w-3.5 h-3.5 text-orange-400" />
-          <span>Meet Styles Intro</span>
-        </button>
+        {/* Live App Mapping / Context feedback */}
+        <div className="pt-3 border-t border-white/5 flex flex-wrap items-center gap-2.5 text-xs">
+          <span className="text-white/40 text-[11px] uppercase tracking-wider font-bold">
+            {isAdaptiveMode ? 'Auto-detected contexts:' : 'Manual mode:'}
+          </span>
+          {isAdaptiveMode ? (
+            <>
+              <div className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-1.5 text-emerald-300 font-medium">
+                <span>WhatsApp</span> → <span className="font-bold text-white">Casual</span>
+              </div>
+              <div className="px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center gap-1.5 text-blue-300 font-medium">
+                <span>Outlook / Email</span> → <span className="font-bold text-white">Professional</span>
+              </div>
+              <div className="px-3 py-1 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center gap-1.5 text-purple-300 font-medium">
+                <span>VS Code</span> → <span className="font-bold text-white">Technical</span>
+              </div>
+              <div className="px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-1.5 text-amber-300 font-medium">
+                <span>Slack</span> → <span className="font-bold text-white">Concise</span>
+              </div>
+            </>
+          ) : (
+            <span className="text-white/50 text-xs italic">
+              Locked to {activeStyleName} across all apps. Click "Adaptive Mode" to enable automatic switching.
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* 1. "CURRENTLY USING" STATE BANNER (Section 3) */}
-      <div className="bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-transparent border border-orange-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+      {/* 1. "CURRENTLY USING" STATE BANNER */}
+      <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/20 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 text-xl font-bold shadow-sm">
             ✦
@@ -119,7 +169,9 @@ export default function MainStylesView({
               {activeStyleName}
             </div>
             <p className="text-xs text-white/50 mt-0.5">
-              Kivi will adapt your words to the context you're working in.
+              {isAdaptiveMode 
+                ? 'Adaptive Mode active: automatically syncing with your foreground app.'
+                : "Manual mode: Whisper adapts to your chosen style everywhere."}
             </p>
           </div>
         </div>
@@ -138,7 +190,7 @@ export default function MainStylesView({
         </div>
       </div>
 
-      {/* 2. TRY A STYLE (Section 1) */}
+      {/* 2. TRY A STYLE (Live comparison) */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
@@ -264,7 +316,7 @@ export default function MainStylesView({
         </div>
       </div>
 
-      {/* 3. YOUR STYLES (Section 2) */}
+      {/* 3. YOUR STYLES */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
@@ -361,7 +413,7 @@ export default function MainStylesView({
         </div>
       </div>
 
-      {/* 4. STYLE USAGE FEEDBACK (Section 11) */}
+      {/* 4. STYLE USAGE FEEDBACK */}
       <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-md mt-2">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-orange-400/90 mb-1">

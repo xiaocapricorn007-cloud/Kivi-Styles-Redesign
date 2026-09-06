@@ -11,11 +11,15 @@ export default function WhispurrApp({
   setMode,
   theme: propTheme,
   setTheme: propSetTheme,
+  isAdaptiveMode,
+  onToggleAdaptive,
 }: {
   mode?: string;
   setMode?: (m: any) => void;
   theme?: string;
   setTheme?: (t: string) => void;
+  isAdaptiveMode?: boolean;
+  onToggleAdaptive?: () => void;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -667,7 +671,12 @@ export default function WhispurrApp({
 
             {activeTab === 'Styles' && (
               <motion.div key="styles" variants={tabVariants} initial="initial" animate="animate" exit="exit" className={`absolute inset-4 flex flex-col gap-6 p-6 md:p-8 overflow-y-auto ${glassPanel}`}>
-                <StylesManager currentMode={mode} setMode={setMode} />
+                <StylesManager 
+                  currentMode={mode} 
+                  setMode={setMode} 
+                  isAdaptiveMode={isAdaptiveMode} 
+                  onToggleAdaptive={onToggleAdaptive} 
+                />
               </motion.div>
             )}
           

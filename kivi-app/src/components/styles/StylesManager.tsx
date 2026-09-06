@@ -14,9 +14,16 @@ import CreateStyleModal from './CreateStyleModal';
 interface StylesManagerProps {
   currentMode?: string;
   setMode?: (mode: any) => void;
+  isAdaptiveMode?: boolean;
+  onToggleAdaptive?: () => void;
 }
 
-export default function StylesManager({ currentMode = 'Professional', setMode }: StylesManagerProps) {
+export default function StylesManager({ 
+  currentMode = 'Professional', 
+  setMode,
+  isAdaptiveMode: propIsAdaptiveMode,
+  onToggleAdaptive: propOnToggleAdaptive,
+}: StylesManagerProps) {
   // Styles list with localStorage sync
   const [styles, setStyles] = useState<StyleItem[]>(() => {
     try {
@@ -29,15 +36,34 @@ export default function StylesManager({ currentMode = 'Professional', setMode }:
     return DEFAULT_STYLES;
   });
 
-  // Current sub-view: 'intro' | 'main' | 'detail'
-  const [viewMode, setViewMode] = useState<'intro' | 'main' | 'detail'>(() => {
+  // Current sub-view: defaults to 'main' so the user sees the Styles page & Adaptive Mode immediately
+  const [viewMode, setViewMode] = useState<'intro' | 'main' | 'detail'>('main');
+
+  // Adaptive mode local sync
+  const [internalAdaptiveMode, setInternalAdaptiveMode] = useState<boolean>(() => {
     try {
-      const seen = localStorage.getItem('whispurr_seen_styles_onboarding') === 'true';
-      return seen ? 'main' : 'intro';
+      const saved = localStorage.getItem('whispurr_adaptive_mode');
+      return saved !== null ? saved === 'true' : true;
     } catch (e) {
-      return 'intro';
+      return true;
     }
   });
+
+  const effectiveAdaptiveMode = propIsAdaptiveMode !== undefined ? propIsAdaptiveMode : internalAdaptiveMode;
+
+  const handleToggleAdaptive = () => {
+    if (propOnToggleAdaptive) {
+      propOnToggleAdaptive();
+    } else {
+      setInternalAdaptiveMode((prev) => {
+        const next = !prev;
+        try {
+          localStorage.setItem('whispurr_adaptive_mode', String(next));
+        } catch (e) {}
+        return next;
+      });
+    }
+  };
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -91,7 +117,6 @@ export default function StylesManager({ currentMode = 'Professional', setMode }:
     try {
       localStorage.setItem('whispurr_styles_custom', JSON.stringify(updatedList));
     } catch (e) {}
-    // Automatically make it active and open its detail view
     handleSelectActiveStyle(newStyle.name);
     setSelectedStyle(newStyle);
     setViewMode('detail');
@@ -118,6 +143,8 @@ export default function StylesManager({ currentMode = 'Professional', setMode }:
             onOpenCreateModal={() => setIsCreateModalOpen(true)}
             onRevisitIntro={handleRevisitIntro}
             weeklyStats={weeklyStats}
+            isAdaptiveMode={effectiveAdaptiveMode}
+            onToggleAdaptive={handleToggleAdaptive}
           />
         )}
 
