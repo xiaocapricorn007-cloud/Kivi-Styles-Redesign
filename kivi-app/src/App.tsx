@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useKiviInput } from './useKiviInput';
 import MockOS from './components/MockOS';
-import FootprintManager from './components/FootprintManager';
 
 export default function App() {
   const { isAltPressed, isLoading, mode, setMode, degree, setDegree, translatedText, toggleListening } = useKiviInput();
@@ -31,9 +30,6 @@ export default function App() {
         isLoading={isLoading}
         toggleListening={toggleListening}
       />
-      
-      {/* Hidden interactive cat footprint animation layer */}
-      <FootprintManager />
     </div>
   );
 }
