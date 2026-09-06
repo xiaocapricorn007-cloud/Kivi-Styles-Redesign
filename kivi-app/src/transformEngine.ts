@@ -1,25 +1,24 @@
 import { Mode } from './useKiviInput';
+import { transformLocally } from './components/styles/StylesData';
 
 const API_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY;
 
 export async function transformText(rawText: string, mode: Mode, degree: number): Promise<string> {
   if (!rawText.trim()) return '';
+
+  // If no API key is provided, use the instant local transformer
   if (!API_KEY) {
-    return "API Key missing. Please add VITE_GEMINI_API_KEY to your .env file and restart the server.";
+    return transformLocally(rawText, mode);
   }
 
   const systemPrompt = `You are WhisPURR, an invisible translation layer. Your job is to translate the user's raw dictated speech into perfectly formatted digital output based on the provided Mode and Degree script.
-Modes:
-- Casual: For personal messaging, friendly and natural.
-- Professional: For formal communication, polished and formal.
-- Concise: Short and direct.
+Styles & Output Intentions:
+- Professional: Clear, polished, work-appropriate, confident.
+- Casual: Natural, conversational, relaxed.
+- Concise: Shorter, tighter, straight to the point.
+- Warm: Friendly without being overly formal, empathetic and supportive.
+- Technical: Preserve technical meaning, terminology, architecture names, and syntax structure.
 - Meeting Notes: Highly structured, bulleted summarization of the conversation.
-- Work Messaging: Professional chats like Slack.
-- Personal Messaging: Raw unedited text.
-- Email: Email responses.
-- Developer: Tickets and PRs.
-- Prompting: LLM prompting.
-- Other Apps: General dictation.
 
 Degree Scripting (IMPORTANT):
 - Degree 1 (Roman): The output MUST be in the English alphabet (Romanized). If translating from another language, spell out the words phonetically using A-Z.
@@ -27,7 +26,7 @@ Degree Scripting (IMPORTANT):
 
 Do not output any conversational filler like "Here is your text". Just output the final translated text directly.`;
 
-  const userPrompt = `Mode: ${mode}\nDegree: ${degree} (${degree === 1 ? 'Roman Script' : 'Native Script'})\nRaw Speech: "${rawText}"\n\nTranslate this perfectly:`;
+  const userPrompt = `Style Intention: ${mode}\nDegree: ${degree} (${degree === 1 ? 'Roman Script' : 'Native Script'})\nRaw Speech: "${rawText}"\n\nTranslate this perfectly:`;
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`, {
@@ -43,13 +42,13 @@ Do not output any conversational filler like "Here is your text". Just output th
     const data = await response.json();
     
     if (data.error) {
-      console.error("Gemini API Error:", data.error);
-      return `API Error: ${data.error.message}`;
+      console.warn("Gemini API Error, falling back to local transformer:", data.error);
+      return transformLocally(rawText, mode);
     }
     
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Error: No text generated.";
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || transformLocally(rawText, mode);
   } catch (error: any) {
-    console.error(error);
-    return `Network Error: ${error.message}`;
+    console.warn("Network Error, falling back to local transformer:", error);
+    return transformLocally(rawText, mode);
   }
 }
