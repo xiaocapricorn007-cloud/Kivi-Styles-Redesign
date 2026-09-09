@@ -49,17 +49,36 @@ export function useKiviInput() {
   
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recognitionRef = useRef<any>(null);
+  const latestTranscriptRef = useRef('');
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const degreeRef = useRef(degree);
+  degreeRef.current = degree;
+
+  const finalizeTransformation = async (rawText: string) => {
+    if (!rawText.trim()) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setIsLoading(true);
+    try {
+      const transformed = await transformText(rawText, modeRef.current, degreeRef.current);
+      setTranslatedText(transformed);
+    } catch (e) {
+      console.warn("Failed to transform text:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Initialize Web Speech API
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+    const SpeechRec = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (SpeechRec) {
+      const recognition = new SpeechRec();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognition.onresult = (event: any) => {
         let interimTranscript = '';
         let finalTranscript = '';
 
@@ -72,6 +91,7 @@ export function useKiviInput() {
         }
 
         const currentText = finalTranscript || interimTranscript;
+        latestTranscriptRef.current = currentText;
         setTranscript(currentText);
 
         if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -79,25 +99,32 @@ export function useKiviInput() {
         debounceRef.current = setTimeout(async () => {
           if (currentText.trim()) {
             setIsLoading(true);
-            const transformed = await transformText(currentText, mode, degree);
+            const transformed = await transformText(currentText, modeRef.current, degreeRef.current);
             setTranslatedText(transformed);
             setIsLoading(false);
           }
-        }, 300);
+        }, 400);
       };
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech Recognition Error:", event.error);
-        setIsLoading(false);
+      recognition.onerror = (event: any) => {
+        console.warn("Speech Recognition Error/Notice:", event.error);
+        if (event.error !== 'no-speech') {
+          setIsLoading(false);
+        }
       };
 
-      recognitionRef.current.onend = () => {
-        // Recognition ended
+      recognition.onend = () => {
+        // If recognition stopped while speech was captured, finalize
+        if (latestTranscriptRef.current.trim() && !isLoading) {
+          finalizeTransformation(latestTranscriptRef.current);
+        }
       };
+
+      recognitionRef.current = recognition;
     }
-  }, [mode, degree]);
+  }, []);
 
-    // Handle Talk key down/up
+  // Handle Talk key down/up
   useEffect(() => {
     const formatKey = (eKey: string) => {
       let key = eKey;
@@ -114,6 +141,7 @@ export function useKiviInput() {
         setIsAltPressed(true);
         setTranscript('');
         setTranslatedText('');
+        latestTranscriptRef.current = '';
         try {
           recognitionRef.current?.start();
         } catch (err) {
@@ -131,6 +159,11 @@ export function useKiviInput() {
         } catch (err) {
           // Already stopped
         }
+
+        // Immediately finalize transformation upon Alt key release
+        if (latestTranscriptRef.current.trim()) {
+          finalizeTransformation(latestTranscriptRef.current);
+        }
       }
     };
 
@@ -147,23 +180,51 @@ export function useKiviInput() {
     if (isAltPressed) {
       setIsAltPressed(false);
       try { recognitionRef.current?.stop(); } catch (e) {}
+      if (latestTranscriptRef.current.trim()) {
+        finalizeTransformation(latestTranscriptRef.current);
+      }
     } else {
       setIsAltPressed(true);
       setTranscript('');
       setTranslatedText('');
+      latestTranscriptRef.current = '';
       try { recognitionRef.current?.start(); } catch (e) {}
     }
+  };
+
+  const simulateSpeech = async (phrase: string) => {
+    setIsAltPressed(true);
+    setTranscript(phrase);
+    latestTranscriptRef.current = phrase;
+    setTranslatedText('');
+
+    setTimeout(() => {
+      setIsAltPressed(false);
+      finalizeTransformation(phrase);
+    }, 450);
+  };
+
+  const resetInputState = () => {
+    setTranscript('');
+    setTranslatedText('');
+    latestTranscriptRef.current = '';
+    setIsAltPressed(false);
+    setIsLoading(false);
   };
 
   return {
     isAltPressed,
     transcript,
+    setTranscript,
     translatedText,
+    setTranslatedText,
     isLoading,
     mode,
     setMode,
     degree,
     setDegree,
     toggleListening,
+    simulateSpeech,
+    resetInputState,
   };
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect, memo, useRef } from 'react';
-import { Mail, Terminal, Sparkles, X, Minus, Wifi, Cat, Type, FileText, Mic, Pencil, Check } from 'lucide-react';
+import { Mail, Terminal, Sparkles, X, Minus, Wifi, Type, Mic, Pencil, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import WhispurrApp from './WhispurrApp';
 import KiviCatIcon from './KiviCatIcon';
+import FloatingDictationHUD from './FloatingDictationHUD';
 
 type AppType = 'email' | 'vscode' | 'ai' | 'whispurr' | null;
 
@@ -16,8 +17,46 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPressed, isLoading, toggleListening }: { activeText: string, mode?: string, setMode?: any, degree?: number, setDegree?: any, isAltPressed?: boolean, isLoading?: boolean, toggleListening?: any }) => {
-  const [openApp, setOpenApp] = useState<AppType>(null);
+interface MockOSProps {
+  activeText: string;
+  transcript?: string;
+  translatedText?: string;
+  setTranslatedText?: (t: string) => void;
+  mode?: string;
+  setMode?: any;
+  degree?: number;
+  setDegree?: any;
+  isAltPressed?: boolean;
+  isLoading?: boolean;
+  toggleListening?: any;
+  simulateSpeech?: (phrase: string) => void;
+  resetInputState?: () => void;
+}
+
+const MockOS = memo(({ 
+  activeText, 
+  transcript,
+  translatedText,
+  mode, 
+  setMode, 
+  degree, 
+  setDegree, 
+  isAltPressed, 
+  isLoading, 
+  toggleListening,
+  simulateSpeech,
+  resetInputState
+}: MockOSProps) => {
+  const [openApp, setOpenApp] = useState<AppType>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('app')) return params.get('app') as AppType;
+      if (params.has('tab')) return 'whispurr';
+      return null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
   
   // Floating Strip State
@@ -55,27 +94,61 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
   const [showModeHud, setShowModeHud] = useState(false);
   const [hudPosition, setHudPosition] = useState({ x: 0, y: 0 });
   
+  const [dialLangs, setDialLangs] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('whispurr_dial_languages');
+      return saved ? JSON.parse(saved) : ['AutoDetect', 'English', 'Hindi'];
+    } catch (e) {
+      return ['AutoDetect', 'English', 'Hindi'];
+    }
+  });
+
+  const [dialModes, setDialModes] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('whispurr_dial_modes');
+      return saved ? JSON.parse(saved) : ['Formal', 'Casual', 'Developer', 'Prompts'];
+    } catch (e) {
+      return ['Formal', 'Casual', 'Developer', 'Prompts'];
+    }
+  });
+
   const [modeRotation, setModeRotation] = useState(0);
   const [activeDial, setActiveDial] = useState<0 | 1>(0);
   const [langRotation, setLangRotation] = useState(0);
-  
-  const LANGS = ['AutoDetect', 'English', 'Hindi'];
-  const MODES = ['Formal', 'Casual', 'Developer', 'Prompts'];
   
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const activeDialRef = useRef(activeDial);
   activeDialRef.current = activeDial;
+  const dialModesRef = useRef(dialModes);
+  dialModesRef.current = dialModes;
+  const dialLangsRef = useRef(dialLangs);
+  dialLangsRef.current = dialLangs;
+
+  // Listen for dynamic dial customizations from WhispurrApp Shortcuts tab
+  useEffect(() => {
+    const handleDialConfigChange = () => {
+      try {
+        const savedLangs = localStorage.getItem('whispurr_dial_languages');
+        if (savedLangs) setDialLangs(JSON.parse(savedLangs));
+        const savedModes = localStorage.getItem('whispurr_dial_modes');
+        if (savedModes) setDialModes(JSON.parse(savedModes));
+      } catch (e) {}
+    };
+    window.addEventListener('whispurr_dial_config_changed', handleDialConfigChange);
+    return () => window.removeEventListener('whispurr_dial_config_changed', handleDialConfigChange);
+  }, []);
   
   useEffect(() => {
     if (isAltPressed) {
-      const idx = MODES.indexOf(modeRef.current as string);
+      const idx = dialModesRef.current.indexOf(modeRef.current as string);
       setModeRotation(idx >= 0 ? idx : 0);
       setActiveDial(0);
+      activeDialRef.current = 0;
     }
   }, [isAltPressed]);
 
-  // Alt+Scroll or Alt+Arrow to change mode/lang
+  // Alt+Scroll or Alt+Arrow / Alt+Right-Click to change mode/lang
   useEffect(() => {
     if (!isAltPressed) return;
     
@@ -100,21 +173,25 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
     
     const cycleMode = (direction: 1 | -1, overrideX?: number, overrideY?: number) => {
       if (!setMode) return;
+      const modesList = dialModesRef.current;
       setModeRotation(prev => {
         let nextRot = prev + direction;
         if (nextRot < 0) nextRot = 0;
-        if (nextRot > MODES.length - 1) nextRot = MODES.length - 1;
-        setMode(MODES[nextRot]);
+        if (nextRot > modesList.length - 1) nextRot = Math.max(0, modesList.length - 1);
+        if (modesList[nextRot]) {
+          setMode(modesList[nextRot]);
+        }
         return nextRot;
       });
       updateHudPosition(overrideX, overrideY);
     };
 
     const cycleLang = (direction: 1 | -1, overrideX?: number, overrideY?: number) => {
+      const langsList = dialLangsRef.current;
       setLangRotation(prev => {
         let nextRot = prev + direction;
         if (nextRot < 0) nextRot = 0;
-        if (nextRot > LANGS.length - 1) nextRot = LANGS.length - 1;
+        if (nextRot > langsList.length - 1) nextRot = Math.max(0, langsList.length - 1);
         return nextRot;
       });
       updateHudPosition(overrideX, overrideY);
@@ -124,6 +201,16 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
       e.preventDefault();
       if (activeDialRef.current === 0) cycleMode(e.deltaY > 0 ? 1 : -1, e.clientX, e.clientY);
       else cycleLang(e.deltaY > 0 ? 1 : -1, e.clientX, e.clientY);
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      setActiveDial(prev => {
+        const next = (prev === 0 ? 1 : 0) as 0 | 1;
+        activeDialRef.current = next;
+        return next;
+      });
+      updateHudPosition(e.clientX, e.clientY);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -138,18 +225,22 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
         setActiveDial(1);
+        activeDialRef.current = 1;
         updateHudPosition();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         setActiveDial(0);
+        activeDialRef.current = 0;
         updateHudPosition();
       }
     };
     
     window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isAltPressed, setMode]);
@@ -179,26 +270,118 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
     }
   }, [mode, isAltPressed]);
 
-  // Append whispurr's translated text to the currently open app or popup
-  useEffect(() => {
-    if (activeText) {
-      if (activePopup === 'scratchpad') {
-        setScratchPadText(prev => prev + (prev ? '\n' : '') + activeText);
-      } else if (openApp) {
-        if (openApp === 'email') setEmailText(prev => prev + (prev ? '\n' : '') + activeText);
-        if (openApp === 'vscode') setVscodeText(prev => prev + (prev ? '\n' : '') + activeText);
-        if (openApp === 'ai') setAiText(prev => prev + (prev ? ' ' : '') + activeText);
-      }
-    }
-  }, [activeText, openApp, activePopup]);
+  // Floating Dictation HUD State & Automatic Typing Logic
+  const [isHudOpen, setIsHudOpen] = useState(false);
+  const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypedTextRef = useRef<string>('');
 
-  const CurrentAppIcon = () => {
-    if (openApp === 'email') return <Mail className="w-4 h-4 text-blue-300" />;
-    if (openApp === 'vscode') return <Terminal className="w-4 h-4 text-blue-500" />;
-    if (openApp === 'ai') return <Sparkles className="w-4 h-4 text-purple-300" />;
-    if (openApp === 'whispurr') return <KiviCatIcon className="w-4 h-4 text-orange-400" />;
-    return <div className="w-4 h-4 border border-white/20 rounded-sm border-dashed" />;
+  // Open HUD whenever Alt is held or speech begins
+  useEffect(() => {
+    if (isAltPressed) {
+      if (autoDismissTimerRef.current) {
+        clearTimeout(autoDismissTimerRef.current);
+        autoDismissTimerRef.current = null;
+      }
+      setIsHudOpen(true);
+    }
+  }, [isAltPressed]);
+
+  useEffect(() => {
+    if (transcript && transcript.trim() && !isHudOpen) {
+      if (autoDismissTimerRef.current) {
+        clearTimeout(autoDismissTimerRef.current);
+        autoDismissTimerRef.current = null;
+      }
+      setIsHudOpen(true);
+    }
+  }, [transcript]);
+
+  // Determine current active destination app or text field
+  const getDestinationApp = () => {
+    if (openApp === 'email') return 'Outlook';
+    if (openApp === 'vscode') return 'VS Code';
+    if (openApp === 'ai') return 'Antigravity AI';
+    if (openApp === 'whispurr') return 'WhisPURR';
+    if (activePopup === 'scratchpad') return 'ScratchPad';
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement)) {
+      return 'Active Text Field';
+    }
+    return null;
   };
+
+  // Helper to insert text at the current cursor position in a focused text field
+  const insertAtCursor = (text: string): boolean => {
+    const activeEl = document.activeElement;
+    if (
+      activeEl &&
+      (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement)
+    ) {
+      const start = activeEl.selectionStart ?? activeEl.value.length;
+      const end = activeEl.selectionEnd ?? activeEl.value.length;
+      const original = activeEl.value;
+      const spaceBefore = start > 0 && !original.slice(0, start).endsWith(' ') && !original.slice(0, start).endsWith('\n') ? ' ' : '';
+      const newText = original.slice(0, start) + spaceBefore + text + original.slice(end);
+
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set ||
+                     Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (setter) {
+        setter.call(activeEl, newText);
+      } else {
+        activeEl.value = newText;
+      }
+
+      activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+      activeEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const newCursor = start + spaceBefore.length + text.length;
+      activeEl.setSelectionRange(newCursor, newCursor);
+      return true;
+    }
+    return false;
+  };
+
+  // Process text typing when final transformed text is ready
+  useEffect(() => {
+    const outputText = translatedText || activeText;
+    if (!outputText || outputText.trim() === '' || isLoading) return;
+    if (lastTypedTextRef.current === outputText) return;
+    lastTypedTextRef.current = outputText;
+
+    const destination = getDestinationApp();
+    if (destination) {
+      // 1. Try cursor insertion if an input/textarea is currently focused
+      const insertedAtCursor = insertAtCursor(outputText);
+
+      // 2. Only update state directly if not already handled by focused element cursor insertion
+      if (!insertedAtCursor) {
+        if (openApp === 'email') {
+          setEmailText(prev => prev ? `${prev}\n${outputText}` : outputText);
+        } else if (openApp === 'vscode') {
+          setVscodeText(prev => prev ? `${prev}\n${outputText}` : outputText);
+        } else if (openApp === 'ai') {
+          setAiText(prev => prev ? `${prev} ${outputText}` : outputText);
+        } else if (activePopup === 'scratchpad') {
+          setScratchPadText(prev => prev ? `${prev}\n${outputText}` : outputText);
+        }
+      }
+
+      if (openApp === 'whispurr') {
+        window.dispatchEvent(new CustomEvent('whispurr-insert-text', { detail: outputText }));
+      }
+
+      // Auto-dismiss HUD after 4s since the text has been inserted into the app
+      if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = setTimeout(() => {
+        setIsHudOpen(false);
+      }, 4000);
+    } else {
+      // No active destination: User is on Desktop!
+      // Keep HUD open with the prominent Copy button so the user can copy and paste from this dialogue box!
+      setIsHudOpen(true);
+    }
+  }, [translatedText, activeText, isLoading, openApp, activePopup]);
+
 
   return (
     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center">
@@ -312,7 +495,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                     </defs>
                     <path d="M 120 10 A 110 110 0 0 1 120 230" fill="none" stroke="url(#arcFadeShared0)" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                  {MODES.map((m, i) => {
+                  {dialModes.map((m, i) => {
                     const diff = i - modeRotation;
                     const angle = diff * 25;
                     const angleRad = angle * (Math.PI / 180);
@@ -320,8 +503,16 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                     const x = Math.cos(angleRad) * radius;
                     const y = Math.sin(angleRad) * radius;
                     const isActive = diff === 0;
+                    const distance = Math.abs(diff);
+                    const opacity = distance === 0 ? 1 : distance === 1 ? 0.65 : distance === 2 ? 0.25 : 0;
                     return (
-                      <motion.div key={m} className="absolute" animate={{ x, y, scale: isActive ? 1.15 : 0.85, opacity: isActive ? 1 : 0.4 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
+                      <motion.div 
+                        key={m} 
+                        className="absolute" 
+                        animate={{ x, y, scale: isActive ? 1.15 : 0.85, opacity }} 
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        style={{ pointerEvents: distance > 2 ? 'none' : 'auto' }}
+                      >
                         <div className={`-translate-y-1/2 px-4 py-2 whitespace-nowrap font-bold transition-all ${isActive ? 'rounded-2xl shadow-xl backdrop-blur-3xl bg-[#5D4037]/90 text-[#E8D5B5] border border-[#3E2723]/50' : 'text-[#E8D5B5] drop-shadow-md'}`}>{m}</div>
                       </motion.div>
                     );
@@ -349,7 +540,7 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                     </defs>
                     <path d="M 120 10 A 110 110 0 0 0 120 230" fill="none" stroke="url(#arcFadeShared1)" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                  {LANGS.map((m, i) => {
+                  {dialLangs.map((m, i) => {
                     const diff = i - langRotation;
                     // Mirror to the left side and invert the vertical progression
                     const angle = 180 - diff * 25;
@@ -358,8 +549,16 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
                     const x = Math.cos(angleRad) * radius;
                     const y = Math.sin(angleRad) * radius;
                     const isActive = diff === 0;
+                    const distance = Math.abs(diff);
+                    const opacity = distance === 0 ? 1 : distance === 1 ? 0.65 : distance === 2 ? 0.25 : 0;
                     return (
-                      <motion.div key={m} className="absolute right-0" animate={{ x, y, scale: isActive ? 1.15 : 0.85, opacity: isActive ? 1 : 0.4 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
+                      <motion.div 
+                        key={m} 
+                        className="absolute right-0" 
+                        animate={{ x, y, scale: isActive ? 1.15 : 0.85, opacity }} 
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        style={{ pointerEvents: distance > 2 ? 'none' : 'auto' }}
+                      >
                         <div className={`-translate-y-1/2 px-4 py-2 whitespace-nowrap font-bold transition-all ${isActive ? 'rounded-2xl shadow-xl backdrop-blur-3xl bg-[#5D4037]/90 text-[#E8D5B5] border border-[#3E2723]/50' : 'text-[#E8D5B5] drop-shadow-md'}`}>{m}</div>
                       </motion.div>
                     );
@@ -647,6 +846,24 @@ const MockOS = memo(({ activeText, mode, setMode, degree, setDegree, isAltPresse
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* FLOATING SPEECH & DICTATION DIALOGUE HUD */}
+      <FloatingDictationHUD 
+        isOpen={isHudOpen}
+        isListening={!!isAltPressed}
+        isProcessing={!!isLoading}
+        transcript={transcript || ''}
+        transformedText={translatedText || activeText || ''}
+        mode={mode || 'Formal'}
+        degree={degree}
+        destinationApp={getDestinationApp()}
+        onClose={() => {
+          setIsHudOpen(false);
+          if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+          if (resetInputState) resetInputState();
+        }}
+        onSimulateSpeech={simulateSpeech}
+      />
     </div>
   );
 });

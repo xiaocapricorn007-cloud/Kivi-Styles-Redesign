@@ -30,15 +30,21 @@ body {
 .theme-coffee .bg-black\/80 { background-color: rgba(62, 39, 35, 0.25) !important; }
 
 .theme-coffee .text-white { color: #3e2723 !important; }
-.theme-coffee [class~="text-white/10"] { color: rgba(62, 39, 35, 0.4) !important; }
-.theme-coffee [class~="text-white/20"] { color: rgba(62, 39, 35, 0.5) !important; }
-.theme-coffee [class~="text-white/30"] { color: rgba(62, 39, 35, 0.6) !important; }
-.theme-coffee [class~="text-white/40"] { color: rgba(62, 39, 35, 0.7) !important; }
-.theme-coffee [class~="text-white/50"] { color: rgba(62, 39, 35, 0.8) !important; }
-.theme-coffee [class~="text-white/60"] { color: rgba(62, 39, 35, 0.9) !important; }
-.theme-coffee [class~="text-white/70"] { color: #3e2723 !important; }
-.theme-coffee [class~="text-white/80"] { color: #3e2723 !important; }
-.theme-coffee [class~="text-white/90"] { color: #3e2723 !important; }
+.theme-coffee [class*="text-white/10"] { color: rgba(62, 39, 35, 0.55) !important; }
+.theme-coffee [class*="text-white/20"] { color: rgba(62, 39, 35, 0.65) !important; }
+.theme-coffee [class*="text-white/30"] { color: rgba(62, 39, 35, 0.75) !important; }
+.theme-coffee [class*="text-white/40"] { color: rgba(62, 39, 35, 0.85) !important; }
+.theme-coffee [class*="text-white/50"] { color: rgba(62, 39, 35, 0.9) !important; }
+.theme-coffee [class*="text-white/60"] { color: rgba(62, 39, 35, 0.95) !important; }
+.theme-coffee [class*="text-white/70"] { color: #3e2723 !important; }
+.theme-coffee [class*="text-white/80"] { color: #3e2723 !important; }
+.theme-coffee [class*="text-white/90"] { color: #3e2723 !important; }
+
+.theme-coffee textarea::placeholder, 
+.theme-coffee input::placeholder,
+.theme-coffee [class*="placeholder-white"]::placeholder {
+  color: rgba(62, 39, 35, 0.65) !important;
+}
 
 .theme-coffee .bg-white\/5 { background-color: rgba(62, 39, 35, 0.05) !important; }
 .theme-coffee .bg-white\/10 { background-color: rgba(62, 39, 35, 0.1) !important; }
@@ -55,12 +61,15 @@ body {
 .theme-coffee .border-white\/\[0\.08\] { border-color: rgba(62, 39, 35, 0.15) !important; }
 
 .theme-coffee .text-orange-50 { color: #3e2723 !important; }
-.theme-coffee .text-orange-200\/50 { color: rgba(93, 64, 55, 0.6) !important; }
-.theme-coffee .text-orange-200\/70 { color: rgba(93, 64, 55, 0.8) !important; }
+.theme-coffee .text-orange-100, .theme-coffee [class*="text-orange-100"] { color: #3e2723 !important; }
+.theme-coffee .text-orange-200, .theme-coffee [class*="text-orange-200"] { color: #5d4037 !important; }
+.theme-coffee .text-orange-200\/40, .theme-coffee [class*="text-orange-200/40"] { color: #5d4037 !important; }
+.theme-coffee .text-orange-200\/50, .theme-coffee [class*="text-orange-200/50"] { color: rgba(93, 64, 55, 0.85) !important; }
+.theme-coffee .text-orange-200\/70, .theme-coffee [class*="text-orange-200/70"] { color: #3e2723 !important; }
 .theme-coffee .text-orange-300 { color: #5d4037 !important; }
 .theme-coffee .text-orange-400 { color: #795548 !important; }
 .theme-coffee .text-orange-500 { color: #8d6e63 !important; }
-.theme-coffee .text-orange-500\/50 { color: rgba(141, 110, 99, 0.6) !important; }
+.theme-coffee .text-orange-500\/50 { color: rgba(141, 110, 99, 0.75) !important; }
 
 .theme-coffee .bg-orange-300 { background-color: #795548 !important; }
 .theme-coffee .bg-orange-400 { background-color: #8d6e63 !important; }

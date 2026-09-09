@@ -3,7 +3,20 @@ import { useKiviInput } from './useKiviInput';
 import MockOS from './components/MockOS';
 
 export default function App() {
-  const { isAltPressed, isLoading, mode, setMode, degree, setDegree, translatedText, toggleListening } = useKiviInput();
+  const { 
+    isAltPressed, 
+    isLoading, 
+    transcript, 
+    translatedText, 
+    setTranslatedText,
+    mode, 
+    setMode, 
+    degree, 
+    setDegree, 
+    toggleListening,
+    simulateSpeech,
+    resetInputState,
+  } = useKiviInput();
 
   // Enter full screen on first user interaction to sell the OS feel
   useEffect(() => {
@@ -22,6 +35,9 @@ export default function App() {
     <div className="relative w-screen h-screen bg-neutral-900 overflow-hidden flex flex-col font-sans">
       <MockOS 
         activeText={(!isAltPressed && !isLoading && translatedText) ? translatedText : ''} 
+        transcript={transcript}
+        translatedText={translatedText}
+        setTranslatedText={setTranslatedText}
         mode={mode} 
         setMode={setMode}
         degree={degree}
@@ -29,6 +45,8 @@ export default function App() {
         isAltPressed={isAltPressed} 
         isLoading={isLoading}
         toggleListening={toggleListening}
+        simulateSpeech={simulateSpeech}
+        resetInputState={resetInputState}
       />
     </div>
   );

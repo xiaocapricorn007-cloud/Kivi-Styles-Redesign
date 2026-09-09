@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { PanelLeftClose, Keyboard, PanelLeft, Home, BookOpen, Zap, Palette, Clock, FileText, X, Mic, Pencil, User, Settings, Shield, LayoutTemplate, CreditCard, PlayCircle, Square, Trash2, Sparkles, Copy, Check, Info, PawPrint } from 'lucide-react';
+import { PanelLeftClose, Keyboard, PanelLeft, Home, BookOpen, Zap, Palette, Clock, FileText, X, Mic, Pencil, User, Settings, Shield, LayoutTemplate, CreditCard, PlayCircle, Square, Trash2, Sparkles, Copy, Check, Info, PawPrint, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Tutorial from './Tutorial';
 import StylesManager from './styles/StylesManager';
@@ -98,6 +98,79 @@ const TOUR_STEPS = [
   ];
 
 const VIDEOS = ['/cat.mp4', '/cat2.mp4', '/cat3.mp4'];
+
+/**
+ * Parses time strings like "1h 42m", "45m", "2h", or numbers into total minutes.
+ */
+function parseTimeToMinutes(timeStr: string | number): number {
+  if (typeof timeStr === 'number') return timeStr;
+  if (!timeStr) return 0;
+  
+  const str = String(timeStr).toLowerCase().trim();
+  let totalMinutes = 0;
+  
+  const hoursMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)/);
+  if (hoursMatch) {
+    totalMinutes += parseFloat(hoursMatch[1]) * 60;
+  }
+  
+  const minsMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)/);
+  if (minsMatch) {
+    totalMinutes += parseFloat(minsMatch[1]);
+  }
+  
+  if (!hoursMatch && !minsMatch) {
+    const num = parseFloat(str);
+    if (!isNaN(num)) return num;
+  }
+  
+  return totalMinutes;
+}
+
+/**
+ * Translates saved minutes into relatable, positive messages tailored for Professional or Casual mode.
+ */
+function getTimeSavedRelatableMessage(minutes: number, isCasual: boolean): string {
+  if (minutes < 5) {
+    return isCasual 
+      ? "A quick breath of fresh air ☕" 
+      : "A few valuable minutes saved.";
+  }
+  if (minutes < 15) {
+    // 5–15 minutes
+    return isCasual 
+      ? "Coffee break earned ☕" 
+      : "Enough time for a coffee.";
+  }
+  if (minutes < 30) {
+    // 15–30 minutes
+    return isCasual 
+      ? "That's a chapter of your book 📖" 
+      : "Enough time to read a chapter.";
+  }
+  if (minutes < 60) {
+    // 30–60 minutes
+    return isCasual 
+      ? "Enough time to watch an episode 🎬" 
+      : "Enough time to watch an episode.";
+  }
+  if (minutes < 120) {
+    // 1–2 hours
+    return isCasual 
+      ? "That's a whole movie + popcorn 🍿" 
+      : "Enough time to watch a movie.";
+  }
+  if (minutes < 240) {
+    // 2–4 hours
+    return isCasual 
+      ? "Enough time to make 3 presentations 📊" 
+      : "Enough time to complete ~3 presentations.";
+  }
+  // 4+ hours
+  return isCasual 
+    ? "That's almost half a workday back ✨" 
+    : "That's almost half a workday back.";
+}
 
 export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: string, setMode?: (m: any) => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -210,7 +283,39 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
 
   const [currentCatFact, setCurrentCatFact] = useState('');
   const [showCatFactPopup, setShowCatFactPopup] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(() => !hasShownTutorialThisSession);
+  const catFactRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCatFactPopup) return;
+
+    const handleOutsideInteraction = (e: MouseEvent | TouchEvent) => {
+      if (catFactRef.current && !catFactRef.current.contains(e.target as Node)) {
+        setShowCatFactPopup(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowCatFactPopup(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsideInteraction);
+    document.addEventListener('touchstart', handleOutsideInteraction);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideInteraction);
+      document.removeEventListener('touchstart', handleOutsideInteraction);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showCatFactPopup]);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try {
+      if (new URLSearchParams(window.location.search).has('tab')) return false;
+    } catch (e) {}
+    return !hasShownTutorialThisSession;
+  });
   const [talkShortcut, setTalkShortcut] = useState(() => localStorage.getItem('whispurr_talk') || 'Alt');
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [quicklaunchShortcut, setQuicklaunchShortcut] = useState(() => localStorage.getItem('whispurr_quicklaunch') || 'Ctrl');
@@ -218,6 +323,87 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
   const [quickEditShortcut, setQuickEditShortcut] = useState(() => localStorage.getItem('whispurr_quickedit') || 'Alt + Ctrl');
   const [isRecordingQuickEdit, setIsRecordingQuickEdit] = useState(false);
   const [isSeamlessSwitchEnabled, setIsSeamlessSwitchEnabled] = useState(() => localStorage.getItem('whispurr_seamless_switch') !== 'false');
+
+  const ALL_DIAL_LANGUAGES = [
+    'AutoDetect',
+    'English',
+    'Hindi',
+    'Spanish',
+    'French',
+    'German',
+    'Japanese',
+    'Mandarin',
+    'Italian',
+    'Portuguese',
+    'Russian',
+    'Arabic',
+    'Korean',
+    'Dutch'
+  ];
+
+  const ALL_DIAL_MODES = [
+    'Formal',
+    'Casual',
+    'Developer',
+    'Prompts',
+    'Other apps',
+    'Academic',
+    'Concise',
+    'Warm',
+    'Technical'
+  ];
+
+  const [dialLanguages, setDialLanguages] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('whispurr_dial_languages');
+      return saved ? JSON.parse(saved) : ['AutoDetect', 'English', 'Hindi'];
+    } catch (e) {
+      return ['AutoDetect', 'English', 'Hindi'];
+    }
+  });
+
+  const [dialModes, setDialModes] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('whispurr_dial_modes');
+      return saved ? JSON.parse(saved) : ['Formal', 'Casual', 'Developer', 'Prompts'];
+    } catch (e) {
+      return ['Formal', 'Casual', 'Developer', 'Prompts'];
+    }
+  });
+
+  const toggleDialLanguage = (lang: string) => {
+    setDialLanguages(prev => {
+      let next: string[];
+      if (prev.includes(lang)) {
+        if (prev.length <= 1) return prev;
+        next = prev.filter(l => l !== lang);
+      } else {
+        next = [...prev, lang];
+      }
+      try {
+        localStorage.setItem('whispurr_dial_languages', JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent('whispurr_dial_config_changed'));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const toggleDialMode = (m: string) => {
+    setDialModes(prev => {
+      let next: string[];
+      if (prev.includes(m)) {
+        if (prev.length <= 1) return prev;
+        next = prev.filter(item => item !== m);
+      } else {
+        next = [...prev, m];
+      }
+      try {
+        localStorage.setItem('whispurr_dial_modes', JSON.stringify(next));
+        window.dispatchEvent(new CustomEvent('whispurr_dial_config_changed'));
+      } catch (e) {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (isRecordingShortcut) {
@@ -318,8 +504,17 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
         ]);
       }
     };
+    const handleInsertText = (e: any) => {
+      if (e.detail) {
+        setHomeChatText(prev => prev ? `${prev} ${e.detail}` : e.detail);
+      }
+    };
     window.addEventListener('add-sticky-note', handleAddNote);
-    return () => window.removeEventListener('add-sticky-note', handleAddNote);
+    window.addEventListener('whispurr-insert-text', handleInsertText);
+    return () => {
+      window.removeEventListener('add-sticky-note', handleAddNote);
+      window.removeEventListener('whispurr-insert-text', handleInsertText);
+    };
   }, []);
 
   useEffect(() => {
@@ -384,6 +579,39 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
   const [isWhisperMode, setIsWhisperMode] = useState(false);
   const [showWhisperInfo, setShowWhisperInfo] = useState(false);
   const [showMoodsInfo, setShowMoodsInfo] = useState(false);
+  const whisperInfoRef = useRef<HTMLDivElement>(null);
+  const moodsInfoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showWhisperInfo && !showMoodsInfo) return;
+
+    const handleOutsideInteraction = (e: MouseEvent | TouchEvent) => {
+      if (showWhisperInfo && whisperInfoRef.current && !whisperInfoRef.current.contains(e.target as Node)) {
+        setShowWhisperInfo(false);
+      }
+      if (showMoodsInfo && moodsInfoRef.current && !moodsInfoRef.current.contains(e.target as Node)) {
+        setShowMoodsInfo(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowWhisperInfo(false);
+        setShowMoodsInfo(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleOutsideInteraction);
+    document.addEventListener('touchstart', handleOutsideInteraction);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideInteraction);
+      document.removeEventListener('touchstart', handleOutsideInteraction);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showWhisperInfo, showMoodsInfo]);
+
   const homeRecognitionRef = useRef<any>(null);
   const homeInitialTextRef = useRef('');
 
@@ -559,30 +787,68 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
     setExpansionInput(item.expansion);
     setShortcutItems(shortcutItems.filter(i => i.id !== item.id));
   };
-  
-  const timeSavedWeekHrs = 15; 
-  let whispurrIcon: React.ReactNode = (
-    <video src="/kitten.mp4" autoPlay loop muted playsInline className="w-full h-full scale-150 object-contain mix-blend-screen" />
-  );
-  let whispurrStage = 'Kitten';
-  let animationClass = '';
-  
-  if (timeSavedWeekHrs >= 2 && timeSavedWeekHrs < 5) {
-    whispurrIcon = '🥱';
-    whispurrStage = 'Waking Up';
-    animationClass = 'animate-[bounce_3s_infinite]';
-  } else if (timeSavedWeekHrs >= 5 && timeSavedWeekHrs < 12) {
-    whispurrIcon = '🐱';
-    whispurrStage = 'Active Kat';
-    animationClass = 'animate-bounce';
-  } else if (timeSavedWeekHrs >= 12) {
-    whispurrIcon = (
-      <video src="/new_zoomies.mp4" autoPlay loop muted playsInline className="w-full h-full scale-[2.0] object-contain mix-blend-multiply opacity-90" />
-    );
-    whispurrStage = 'Zoomies';
-    animationClass = '';
-  }
 
+  const timeSavedWeekHrs = 15;
+
+  const [timeSavedToday, setTimeSavedToday] = useState<string>(() => {
+    try {
+      return localStorage.getItem('whispurr_time_saved_today') || '1h 42m';
+    } catch {
+      return '1h 42m';
+    }
+  });
+
+  useEffect(() => {
+    const handleTimeSavedChange = (e: Event) => {
+      const custom = e as CustomEvent;
+      if (custom.detail && typeof custom.detail.timeSaved === 'string') {
+        setTimeSavedToday(custom.detail.timeSaved);
+      } else {
+        try {
+          const saved = localStorage.getItem('whispurr_time_saved_today');
+          if (saved) setTimeSavedToday(saved);
+        } catch {}
+      }
+    };
+    window.addEventListener('whispurr_time_saved_changed', handleTimeSavedChange);
+    window.addEventListener('storage', handleTimeSavedChange);
+    return () => {
+      window.removeEventListener('whispurr_time_saved_changed', handleTimeSavedChange);
+      window.removeEventListener('storage', handleTimeSavedChange);
+    };
+  }, []);
+
+  const [activeMode, setActiveMode] = useState<string>(() => {
+    try {
+      return mode || localStorage.getItem('whispurr_mode') || 'Professional';
+    } catch {
+      return mode || 'Professional';
+    }
+  });
+
+  useEffect(() => {
+    if (mode) setActiveMode(mode);
+  }, [mode]);
+
+  useEffect(() => {
+    const handleModeChange = () => {
+      try {
+        const saved = localStorage.getItem('whispurr_mode');
+        if (saved) setActiveMode(saved);
+      } catch {}
+    };
+    window.addEventListener('storage', handleModeChange);
+    window.addEventListener('whispurr_dial_config_changed', handleModeChange);
+    return () => {
+      window.removeEventListener('storage', handleModeChange);
+      window.removeEventListener('whispurr_dial_config_changed', handleModeChange);
+    };
+  }, []);
+
+  const isCasualMode = (activeMode || '').toLowerCase() === 'casual';
+  const minutesSaved = parseTimeToMinutes(timeSavedToday);
+  const timeSavedRelatableMessage = getTimeSavedRelatableMessage(minutesSaved, isCasualMode);
+  
   // Animation variants
   const tabVariants = {
     initial: { opacity: 0, y: 10, scale: 0.99, filter: 'blur(4px)' },
@@ -704,7 +970,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
             <motion.div animate={{ opacity: isSidebarOpen ? 1 : 0, width: isSidebarOpen ? 'auto' : 0 }} className="text-base font-medium overflow-hidden">History</motion.div>
           </div>
 
-          <motion.div animate={{ opacity: isSidebarOpen ? 1 : 0 }} className={`mt-6 mb-2 text-xs font-bold text-white/30 uppercase tracking-widest h-5 transition-all ${isSidebarOpen ? 'px-8' : 'px-0 text-center w-full shrink-0'} ${isTourActive ? 'opacity-20 blur-[1px]' : ''}`}>
+          <motion.div animate={{ opacity: isSidebarOpen ? 1 : 0 }} className={`mt-6 mb-2 text-xs font-bold text-white/50 uppercase tracking-widest h-5 transition-all ${isSidebarOpen ? 'px-8' : 'px-0 text-center w-full shrink-0'} ${isTourActive ? 'opacity-20 blur-[1px]' : ''}`}>
             Customize
           </motion.div>
           
@@ -738,7 +1004,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
           </div>
 
           {/* Cat Facts Button with Popup */}
-          <div className="relative">
+          <div ref={catFactRef} className="relative">
             <div onClick={() => {
               if (!showCatFactPopup) {
                 setCurrentCatFact(CAT_FACTS[Math.floor(Math.random() * CAT_FACTS.length)]);
@@ -759,11 +1025,24 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                   initial={{ opacity: 0, x: -10, y: 10 }}
                   animate={{ opacity: 1, x: 0, y: 0 }}
                   exit={{ opacity: 0, x: -10, y: 10 }}
-                  className={`fixed bottom-8 ${isSidebarOpen ? 'left-[280px]' : 'left-[100px]'} w-80 p-6 rounded-2xl bg-[#1e1e1e]/95 backdrop-blur-xl border border-[#8d6e63]/40 shadow-[0_0_40px_rgba(0,0,0,0.8)] z-[9999] pointer-events-none whitespace-normal`}
+                  className={`fixed bottom-8 ${isSidebarOpen ? 'left-[280px]' : 'left-[100px]'} w-80 p-6 rounded-2xl bg-[#1e1e1e]/95 backdrop-blur-xl border border-[#8d6e63]/40 shadow-[0_0_40px_rgba(0,0,0,0.8)] z-[9999] pointer-events-auto whitespace-normal`}
                 >
-                  <div className="flex items-center gap-2 mb-3 text-[#8d6e63]">
-                    <Sparkles className="w-5 h-5" />
-                    <span className="text-sm font-bold uppercase tracking-wider">Did you know?</span>
+                  <div className="flex items-center justify-between mb-3 text-[#8d6e63]">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5" />
+                      <span className="text-sm font-bold uppercase tracking-wider">Did you know?</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCatFactPopup(false);
+                      }}
+                      className="text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                   <p className="text-[15px] text-[#E8D5B5] leading-relaxed italic font-medium">
                     "{currentCatFact}"
@@ -842,7 +1121,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
           <AnimatePresence mode="wait">
               {activeTab === 'Home' && (
               <motion.div key="home" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="absolute inset-4 flex gap-4">
-                <div className="flex-1 flex flex-col gap-6 relative z-10">
+                <div className="flex-1 flex flex-col gap-4 relative z-10">
                   <FootprintManager contained={true} />
                   {/* Centered Fun Greeting Section */}
                   <div className="w-full flex flex-col items-center justify-center text-center relative z-20 pt-1 pb-1 select-none">
@@ -850,7 +1129,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                     <div className="relative inline-flex items-center justify-center gap-3">
                       <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white flex items-center gap-2 drop-shadow-sm">
                         <span>{getTimeGreeting().text},</span>
-                        <span className="bg-gradient-to-r from-orange-300 via-amber-200 to-orange-400 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-orange-400 via-amber-300 to-orange-500 bg-clip-text text-transparent">
                           Ugine
                         </span>
                         <span className="text-2xl">{getTimeGreeting().icon}</span>
@@ -896,7 +1175,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.25 }}
                       onClick={handleBoop}
-                      className="mt-2 text-white/60 hover:text-white/90 text-sm max-w-xl cursor-pointer flex items-center justify-center gap-1.5 transition-colors group px-2"
+                      className="mt-2 text-white/70 hover:text-white text-sm font-medium max-w-xl cursor-pointer flex items-center justify-center gap-1.5 transition-colors group px-2"
                       title="Click to shuffle fun kitty thoughts!"
                     >
                       <p className="leading-relaxed">
@@ -931,19 +1210,29 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                               </span>
                             )}
                           </h2>
-                          <p className="text-xs text-white/40">Speak naturally and convert your speech into copyable text</p>
+                          <p className="text-xs text-white/60 font-medium">Speak naturally and convert your speech into copyable text</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                           {homeChatText && (
-                            <button
-                              onClick={handleClearHomeChat}
-                              className="p-2 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-xl transition-colors"
-                              title="Clear text"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <>
+                              <button
+                                onClick={handleFormatWithAI}
+                                disabled={isHomeTransforming}
+                                className="p-2 text-white/40 hover:text-orange-400 hover:bg-white/5 rounded-xl transition-colors"
+                                title="Format with AI"
+                              >
+                                <Sparkles className={`w-4 h-4 ${isHomeTransforming ? 'animate-spin text-orange-400' : ''}`} />
+                              </button>
+                              <button
+                                onClick={handleClearHomeChat}
+                                className="p-2 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-xl transition-colors"
+                                title="Clear text"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={handleCopyHomeChat}
@@ -993,11 +1282,10 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                               <span className={`w-2.5 h-2.5 rounded-full ${isWhisperMode ? 'bg-[#5d4037]' : 'bg-[#8d6e63]/60'}`} />
                             </motion.span>
                           </button>
-                          <div className="relative">
+                          <div ref={whisperInfoRef} className="relative">
                             <button 
                               onClick={() => setShowWhisperInfo(!showWhisperInfo)}
-                              onBlur={() => setShowWhisperInfo(false)}
-                              className="p-1.5 rounded-full text-[#E8D5B5]/70 hover:text-[#E8D5B5] hover:bg-[#5d4037]/40 transition-colors relative z-20"
+                              className="p-1.5 rounded-full text-[#E8D5B5]/70 hover:text-[#E8D5B5] hover:bg-[#5d4037]/40 transition-colors relative z-20 cursor-pointer"
                               title="Info"
                             >
                               <Info className="w-5 h-5" />
@@ -1008,7 +1296,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                  className="absolute top-full mt-2 right-0 w-56 bg-[#2B1F1A] border border-[#5D4037]/50 rounded-xl p-3 shadow-2xl z-50 pointer-events-none"
+                                  className="absolute top-full mt-2 right-0 w-56 bg-[#2B1F1A] border border-[#5D4037]/50 rounded-xl p-3 shadow-2xl z-50 pointer-events-auto"
                                 >
                                   <div className="absolute -top-1.5 right-4 w-3 h-3 bg-[#2B1F1A] border-t border-l border-[#5D4037]/50 rotate-45" />
                                   <div className="text-[11px] text-[#E8D5B5] leading-relaxed relative z-10 font-medium">
@@ -1050,11 +1338,10 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                               <span className={`w-2.5 h-2.5 rounded-full ${moodsEnabled ? 'bg-[#5d4037]' : 'bg-[#8d6e63]/60'}`} />
                             </motion.span>
                           </button>
-                          <div className="relative">
+                          <div ref={moodsInfoRef} className="relative">
                             <button 
                               onClick={() => setShowMoodsInfo(!showMoodsInfo)}
-                              onBlur={() => setShowMoodsInfo(false)}
-                              className="p-1.5 rounded-full text-[#E8D5B5]/70 hover:text-[#E8D5B5] hover:bg-[#5d4037]/40 transition-colors relative z-20"
+                              className="p-1.5 rounded-full text-[#E8D5B5]/70 hover:text-[#E8D5B5] hover:bg-[#5d4037]/40 transition-colors relative z-20 cursor-pointer"
                               title="Info"
                             >
                               <Info className="w-5 h-5" />
@@ -1065,7 +1352,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                  className="absolute top-full mt-2 right-0 w-56 bg-[#2B1F1A] border border-[#5D4037]/50 rounded-xl p-3 shadow-2xl z-50 pointer-events-none"
+                                  className="absolute top-full mt-2 right-0 w-56 bg-[#2B1F1A] border border-[#5D4037]/50 rounded-xl p-3 shadow-2xl z-50 pointer-events-auto"
                                 >
                                   <div className="absolute -top-1.5 right-4 w-3 h-3 bg-[#2B1F1A] border-t border-l border-[#5D4037]/50 rotate-45" />
                                   <div className="text-[11px] text-[#E8D5B5] leading-relaxed relative z-10 font-medium">
@@ -1089,17 +1376,17 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                             ? 'Listening to your voice... Speak clearly into your microphone...'
                             : 'Click the Mic icon to speak, or type here directly to convert and copy anywhere...'
                         }
-                        className="flex-1 w-full bg-black/40 border border-white/5 focus:border-orange-500/40 rounded-2xl p-5 text-white placeholder-white/20 resize-none outline-none font-sans text-base leading-relaxed transition-all shadow-inner"
+                        className="flex-1 w-full bg-black/40 border border-white/5 focus:border-orange-500/40 rounded-2xl p-5 text-white placeholder-white/40 resize-none outline-none font-sans text-base leading-relaxed transition-all shadow-inner"
                       />
                       
                       {/* Character & Word count */}
-                      <div className="flex items-center justify-between pt-2 px-1 text-xs text-white/30 shrink-0">
+                      <div className="flex items-center justify-between pt-2 px-1 text-xs text-white/60 font-semibold shrink-0">
                         <div className="flex items-center gap-4">
                           <span>{homeChatText.trim() ? homeChatText.trim().split(/\s+/).length : 0} words</span>
                           <span>{homeChatText.length} characters</span>
                         </div>
                         {isHomeCopied && (
-                          <span className="text-emerald-400 font-medium animate-pulse">
+                          <span className="text-emerald-400 font-semibold animate-pulse">
                             ✓ Copied to clipboard! Ready to paste anywhere (Ctrl+V / Cmd+V)
                           </span>
                         )}
@@ -1135,26 +1422,29 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                     />
                   </div>
                   
-                  <h3 className="text-lg font-bold text-orange-50 mb-4 text-center border-b border-white/10 pb-3">Today's Impact</h3>
+                  <h3 className="text-lg font-bold text-white mb-4 text-center border-b border-white/10 pb-3">Today's Impact</h3>
                   <div className="flex flex-col gap-4 items-center">
                     <div className="flex flex-col items-center justify-center p-4 w-full rounded-2xl bg-orange-500/10 border border-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.05)]">
-                      <div className="text-xs text-orange-100/70 mb-1 uppercase tracking-wider font-semibold">Time Saved Today</div>
-                      <div className="font-bold text-4xl text-orange-400">1h 42m</div>
-                      <div className="text-xs text-orange-200/40 mt-2">Weekly Total: {timeSavedWeekHrs} Hours</div>
+                      <div className="text-xs text-orange-200 mb-1 uppercase tracking-wider font-bold">Time Saved Today</div>
+                      <div className="font-bold text-4xl text-orange-400">{timeSavedToday}</div>
+                      <div className="text-xs text-orange-100 font-semibold mt-1.5 text-center tracking-tight px-1">
+                        {timeSavedRelatableMessage}
+                      </div>
+                      <div className="text-xs text-orange-200 mt-2 font-semibold">Weekly Total: {timeSavedWeekHrs} Hours</div>
                     </div>
                     <div className="flex w-full gap-3">
                       <div className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/5">
-                        <Clock className="w-5 h-5 text-white/30" />
+                        <Clock className="w-5 h-5 text-orange-400" />
                         <div className="text-center">
                           <div className="font-bold text-sm text-white">24m</div>
-                          <div className="text-[10px] text-white/40 uppercase">Dictating</div>
+                          <div className="text-[10px] text-white/70 uppercase font-bold tracking-wider">Dictating</div>
                         </div>
                       </div>
                       <div className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/5">
-                        <FileText className="w-5 h-5 text-white/30" />
+                        <FileText className="w-5 h-5 text-orange-400" />
                         <div className="text-center">
                           <div className="font-bold text-sm text-white">3.4k</div>
-                          <div className="text-[10px] text-white/40 uppercase">Words</div>
+                          <div className="text-[10px] text-white/70 uppercase font-bold tracking-wider">Words</div>
                         </div>
                       </div>
                     </div>
@@ -1385,8 +1675,8 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
               </motion.div>
             )}
 
-            {activeTab === 'Modes' && (
-              <motion.div key="context" variants={tabVariants} initial="initial" animate="animate" exit="exit" className={`absolute inset-4 flex flex-col gap-6 p-6 md:p-8 overflow-y-auto ${glassPanel}`}>
+            {(activeTab === 'Modes' || activeTab === 'Context') && (
+              <motion.div key="context" variants={tabVariants} initial="initial" animate="animate" exit="exit" className={`absolute inset-4 flex flex-col p-4 md:p-6 overflow-hidden ${glassPanel}`}>
                 <StylesManager 
                   currentMode={mode || 'Professional'} 
                   setMode={setMode}
@@ -1395,8 +1685,8 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
             )}
           
                         {activeTab === 'Shortcuts' && (
-              <motion.div key="shortcuts" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="absolute inset-4 flex gap-4">
-                <div className="flex-1 flex flex-col gap-6 max-w-4xl mx-auto">
+              <motion.div id="shortcuts-tab-scroll" key="shortcuts" variants={tabVariants} initial="initial" animate="animate" exit="exit" className="absolute inset-4 overflow-y-auto pr-2 pb-16 custom-scrollbar">
+                <div className="flex flex-col gap-6 max-w-4xl mx-auto">
                   <div className="px-2 mt-4">
                     <h1 className="text-3xl font-bold tracking-tight mb-2 text-white">Keyboard Shortcuts</h1>
                     <p className="text-white/50 text-sm">Customize how you interact with WhisPURR via your keyboard.</p>
@@ -1454,26 +1744,154 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col gap-1.5">
-                        <span className="text-xl font-bold text-white tracking-tight">Seamless Switch</span>
-                        <span className="text-[15px] text-white/50">Easily switch between modes without ever having to open the app</span>
-                        <span className="text-xs text-orange-400 font-mono mt-1 uppercase tracking-widest">Shortcut: Arrow Up/Down & Mouse Scroll</span>
+                    {/* Seamless Switch & Radial Dials */}
+                    <div className="flex flex-col gap-5 pt-6 border-t border-white/5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl font-bold text-white tracking-tight">Seamless Switch (Dual Radial Dials)</span>
+                            <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                              OS HUD
+                            </span>
+                          </div>
+                          <span className="text-[15px] text-white/50">
+                            Switch between tone modes and target languages directly from anywhere on your desktop.
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const next = !isSeamlessSwitchEnabled;
+                            setIsSeamlessSwitchEnabled(next);
+                            localStorage.setItem('whispurr_seamless_switch', String(next));
+                          }}
+                          className={`relative w-[68px] h-[36px] rounded-full transition-colors shadow-inner shrink-0 ${
+                            isSeamlessSwitchEnabled ? 'bg-orange-500' : 'bg-white/10'
+                          }`}
+                        >
+                          <div className={`absolute top-1 bottom-1 w-7 bg-white rounded-full transition-transform shadow-md ${
+                            isSeamlessSwitchEnabled ? 'left-[36px]' : 'left-1'
+                          }`} />
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => {
-                          const next = !isSeamlessSwitchEnabled;
-                          setIsSeamlessSwitchEnabled(next);
-                          localStorage.setItem('whispurr_seamless_switch', String(next));
-                        }}
-                        className={`relative w-[68px] h-[36px] rounded-full transition-colors shadow-inner ${
-                          isSeamlessSwitchEnabled ? 'bg-orange-500' : 'bg-white/10'
-                        }`}
-                      >
-                        <div className={`absolute top-1 bottom-1 w-7 bg-white rounded-full transition-transform shadow-md ${
-                          isSeamlessSwitchEnabled ? 'left-[36px]' : 'left-1'
-                        }`} />
-                      </button>
+
+                      {/* Instructions Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        {/* Right Dial: Modes */}
+                        <div className="bg-[#1a1a1a]/80 border border-white/10 rounded-2xl p-4 flex flex-col gap-2 shadow-inner">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-orange-400">Right Dial: Modes</span>
+                            <span className="px-2 py-0.5 bg-orange-500/15 border border-orange-500/30 text-orange-300 rounded font-mono text-[11px] font-bold">
+                              Alt + Scroll
+                            </span>
+                          </div>
+                          <p className="text-xs text-white/75 leading-relaxed">
+                            Hold <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-[#f4ece1] font-mono text-[11px]">Alt</kbd> anywhere and <strong>scroll</strong> (or press <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-[#f4ece1] font-mono text-[11px]">↑</kbd> / <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-[#f4ece1] font-mono text-[11px]">↓</kbd>) to cycle through your tone modes on the right radial dial.
+                          </p>
+                        </div>
+
+                        {/* Left Dial: Languages */}
+                        <div className="bg-[#1a1a1a]/80 border border-white/10 rounded-2xl p-4 flex flex-col gap-2 shadow-inner">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Left Dial: Languages</span>
+                            <span className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded font-mono text-[11px] font-bold">
+                              Alt + Right Click / →
+                            </span>
+                          </div>
+                          <p className="text-xs text-white/75 leading-relaxed">
+                            Hold <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-[#f4ece1] font-mono text-[11px]">Alt</kbd> and <strong>right-click</strong> (or press <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-[#f4ece1] font-mono text-[11px]">→</kbd> / <kbd className="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-[#f4ece1] font-mono text-[11px]">←</kbd>) to switch to the languages dial, then <strong>scroll</strong> to select your language.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Customise Languages to Showcase */}
+                      <div className="flex flex-col gap-3 bg-[#1a1a1a]/50 border border-white/10 rounded-2xl p-4 md:p-5 mt-1">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                              <span>Showcased Languages on Dial</span>
+                              <span className="text-xs text-amber-400 font-mono">({dialLanguages.length} active)</span>
+                            </h3>
+                            <p className="text-xs text-white/50 mt-0.5">
+                              Click languages to customize which ones are showcased on the left radial dial.
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const resetLangs = ['AutoDetect', 'English', 'Hindi'];
+                              setDialLanguages(resetLangs);
+                              localStorage.setItem('whispurr_dial_languages', JSON.stringify(resetLangs));
+                              window.dispatchEvent(new CustomEvent('whispurr_dial_config_changed'));
+                            }}
+                            className="text-[11px] text-white/40 hover:text-white/80 transition-colors underline cursor-pointer"
+                          >
+                            Reset to defaults
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {ALL_DIAL_LANGUAGES.map(lang => {
+                            const isSelected = dialLanguages.includes(lang);
+                            return (
+                              <button
+                                key={lang}
+                                onClick={() => toggleDialLanguage(lang)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.15)] font-semibold'
+                                    : 'bg-white/5 text-white/50 border-white/5 hover:bg-white/10 hover:text-white/80 hover:border-white/15'
+                                }`}
+                              >
+                                {isSelected ? <Check className="w-3.5 h-3.5 text-amber-400" /> : <Plus className="w-3.5 h-3.5 opacity-40" />}
+                                <span>{lang}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Customise Modes to Showcase */}
+                      <div className="flex flex-col gap-3 bg-[#1a1a1a]/50 border border-white/10 rounded-2xl p-4 md:p-5">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                              <span>Showcased Modes on Dial</span>
+                              <span className="text-xs text-orange-400 font-mono">({dialModes.length} active)</span>
+                            </h3>
+                            <p className="text-xs text-white/50 mt-0.5">
+                              Click modes to customize which ones are showcased on the right radial dial.
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const resetModes = ['Formal', 'Casual', 'Developer', 'Prompts'];
+                              setDialModes(resetModes);
+                              localStorage.setItem('whispurr_dial_modes', JSON.stringify(resetModes));
+                              window.dispatchEvent(new CustomEvent('whispurr_dial_config_changed'));
+                            }}
+                            className="text-[11px] text-white/40 hover:text-white/80 transition-colors underline cursor-pointer"
+                          >
+                            Reset to defaults
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {ALL_DIAL_MODES.map(m => {
+                            const isSelected = dialModes.includes(m);
+                            return (
+                              <button
+                                key={m}
+                                onClick={() => toggleDialMode(m)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-orange-500/20 text-orange-300 border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.15)] font-semibold'
+                                    : 'bg-white/5 text-white/50 border-white/5 hover:bg-white/10 hover:text-white/80 hover:border-white/15'
+                                }`}
+                              >
+                                {isSelected ? <Check className="w-3.5 h-3.5 text-orange-400" /> : <Plus className="w-3.5 h-3.5 opacity-40" />}
+                                <span>{m}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1708,7 +2126,7 @@ export default function WhispurrApp({ mode, setMode = () => {} }: { mode?: strin
               </motion.div>
             )}
 
-            {!['Home', 'History', 'Dictionary', 'ShortHand', 'ScratchPad', 'Modes', 'Theme', 'Tutorial', 'Shortcuts', 'Settings', 'Plans & Billing', 'User Policy', 'Profile'].includes(activeTab) && (
+            {!['Home', 'History', 'Dictionary', 'ShortHand', 'ScratchPad', 'Modes', 'Context', 'Theme', 'Tutorial', 'Shortcuts', 'Settings', 'Plans & Billing', 'User Policy', 'Profile'].includes(activeTab) && (
               <motion.div key="fallback" variants={tabVariants} initial="initial" animate="animate" exit="exit" className={`absolute inset-4 flex flex-col items-center justify-center gap-4 p-8 ${glassPanel}`}>
                 <Settings className="w-16 h-16 text-white/10" />
                 <h1 className="text-2xl font-bold text-white/50">{activeTab}</h1>
